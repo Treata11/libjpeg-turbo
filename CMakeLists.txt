@@ -258,6 +258,9 @@ option(WITH_TURBOJPEG
   "Include the TurboJPEG API library and associated test programs" TRUE)
 boolean_number(WITH_TURBOJPEG)
 option(WITH_FUZZ "Build fuzz targets" FALSE)
+if(APPLE)
+  option(ENABLE_FRAMEWORK "Build as Apple Frameworks" OFF)
+endif()
 
 macro(report_option var desc)
   if(${var})
@@ -389,6 +392,27 @@ set(TURBOJPEG_SO_MAJOR_VERSION 0)
 # 4: TurboJPEG 3.1.x API
 set(TURBOJPEG_SO_AGE 4)
 set(TURBOJPEG_SO_VERSION 0.${TURBOJPEG_SO_AGE}.0)
+
+macro(set_framework_properties target_name)
+  if(ENABLE_FRAMEWORK)
+    set_target_properties(${target_name} PROPERTIES
+      FRAMEWORK TRUE
+      FRAMEWORK_VERSION ${JPEG_LIB_VERSION}
+      PRODUCT_BUNDLE_IDENTIFIER "github.com/libjpeg-turbo/libjpeg-turbo/${target_name}"
+      XCODE_ATTRIBUTE_INSTALL_PATH "@rpath"
+      # PUBLIC_HEADER "${sources}"
+      # OUTPUT_NAME "${target_name}"
+      XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
+      XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
+      XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
+      MACOSX_FRAMEWORK_IDENTIFIER "github.com/libjpeg-turbo/libjpeg-turbo/${target_name}"
+      MACOSX_FRAMEWORK_BUNDLE_VERSION ${JPEG_LIB_VERSION}
+      MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${SO_MAJOR_VERSION}
+      MACOSX_RPATH TRUE
+      # RESOURCE "${sources}"
+    )
+  endif()
+endmacro()
 
 
 ###############################################################################
@@ -661,9 +685,11 @@ if(ENABLE_SHARED)
   add_library(jpeg12 OBJECT ${JPEG12_SOURCES})
   set_property(TARGET jpeg12 PROPERTY COMPILE_FLAGS "-DBITS_IN_JSAMPLE=12")
   set_target_properties(jpeg12 PROPERTIES POSITION_INDEPENDENT_CODE 1)
+  set_framework_properties(jpeg12)
   add_library(jpeg16 OBJECT ${JPEG16_SOURCES})
   set_property(TARGET jpeg16 PROPERTY COMPILE_FLAGS "-DBITS_IN_JSAMPLE=16")
   set_target_properties(jpeg16 PROPERTIES POSITION_INDEPENDENT_CODE 1)
+  set_framework_properties(jpeg16)
   add_subdirectory(sharedlib)
 endif()
 
@@ -681,6 +707,7 @@ if(ENABLE_STATIC)
     $<TARGET_OBJECTS:jpeg16-static>)
   if(NOT MSVC_LIKE)
     set_target_properties(jpeg-static PROPERTIES OUTPUT_NAME jpeg)
+    set_framework_properties(jpeg-static)
   endif()
 endif()
 
@@ -726,6 +753,7 @@ if(WITH_TURBOJPEG)
         set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG "-Wl,-rpath,")
       endif()
       set_target_properties(turbojpeg PROPERTIES MACOSX_RPATH 1)
+      set_framework_properties(turbojpeg)
     endif()
     set_target_properties(turbojpeg PROPERTIES
       SOVERSION ${TURBOJPEG_SO_MAJOR_VERSION} VERSION ${TURBOJPEG_SO_VERSION})
@@ -774,6 +802,7 @@ if(WITH_TURBOJPEG)
       "-DBMP_SUPPORTED -DPPM_SUPPORTED")
     if(NOT MSVC_LIKE)
       set_target_properties(turbojpeg-static PROPERTIES OUTPUT_NAME turbojpeg)
+      set_framework_properties(turbojpeg)
     endif()
 
     add_executable(tjunittest-static src/tjunittest.c src/tjutil.c
@@ -1971,8 +2000,10 @@ if(WITH_TURBOJPEG)
       INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
       ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT lib
       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT lib
+      FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime OPTIONAL
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT bin)
     install(TARGETS tjbench
+      FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime OPTIONAL
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT bin)
     if(NOT CMAKE_VERSION VERSION_LESS "3.1" AND MSVC_LIKE AND
       CMAKE_C_LINKER_SUPPORTS_PDB)
@@ -1983,6 +2014,7 @@ if(WITH_TURBOJPEG)
   if(ENABLE_STATIC)
     install(TARGETS turbojpeg-static EXPORT ${CMAKE_PROJECT_NAME}Targets
       INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+      FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime OPTIONAL
       ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT lib)
     if(NOT ENABLE_SHARED)
       if(GENERATOR_IS_MULTI_CONFIG)
@@ -2001,6 +2033,7 @@ endif()
 if(ENABLE_STATIC)
   install(TARGETS jpeg-static EXPORT ${CMAKE_PROJECT_NAME}Targets
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime OPTIONAL
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT lib)
   if(NOT ENABLE_SHARED)
     if(GENERATOR_IS_MULTI_CONFIG)
@@ -2018,6 +2051,7 @@ if(ENABLE_STATIC)
 endif()
 
 install(TARGETS rdjpgcom wrjpgcom
+  FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime OPTIONAL
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT bin)
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/README.ijg
