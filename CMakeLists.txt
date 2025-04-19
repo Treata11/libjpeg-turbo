@@ -399,8 +399,8 @@ macro(set_framework_properties target_name)
       FRAMEWORK TRUE
       FRAMEWORK_VERSION ${JPEG_LIB_VERSION}
       PRODUCT_BUNDLE_IDENTIFIER "github.com/libjpeg-turbo/libjpeg-turbo/${target_name}"
+      PUBLIC_HEADER "${PUBLIC_HEADERS}"
       XCODE_ATTRIBUTE_INSTALL_PATH "@rpath"
-      # PUBLIC_HEADER "${sources}"
       # OUTPUT_NAME "${target_name}"
       XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
       XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
@@ -409,7 +409,7 @@ macro(set_framework_properties target_name)
       MACOSX_FRAMEWORK_BUNDLE_VERSION ${JPEG_LIB_VERSION}
       MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${SO_MAJOR_VERSION}
       MACOSX_RPATH TRUE
-      # RESOURCE "${sources}"
+      # RESOURCE "${PUBLIC_HEADERS}"
     )
   endif()
 endmacro()
@@ -626,15 +626,21 @@ if(CMAKE_EXECUTABLE_SUFFIX_TMP)
 endif()
 message(STATUS "CMAKE_EXECUTABLE_SUFFIX = ${CMAKE_EXECUTABLE_SUFFIX}")
 
-set(JPEG16_SOURCES src/jcapistd.c src/jccolor.c src/jcdiffct.c src/jclossls.c
+set(PUBLIC_HEADERS
+  # src/jconfig.h
+  src/jerror.h
+  src/jmorecfg.h
+  src/jpeglib.h
+  src/turbojpeg.h) 
+set(JPEG16_SOURCES ${PUBLIC_HEADERS} src/jcapistd.c src/jccolor.c src/jcdiffct.c src/jclossls.c
   src/jcmainct.c src/jcprepct.c src/jcsample.c src/jdapistd.c src/jdcolor.c
   src/jddiffct.c src/jdlossls.c src/jdmainct.c src/jdpostct.c src/jdsample.c
   src/jutils.c)
-set(JPEG12_SOURCES ${JPEG16_SOURCES} src/jccoefct.c src/jcdctmgr.c
+set(JPEG12_SOURCES ${PUBLIC_HEADERS} ${JPEG16_SOURCES} src/jccoefct.c src/jcdctmgr.c
   src/jdcoefct.c src/jddctmgr.c src/jdmerge.c src/jfdctfst.c src/jfdctint.c
   src/jidctflt.c src/jidctfst.c src/jidctint.c src/jidctred.c src/jquant1.c
   src/jquant2.c)
-set(JPEG_SOURCES ${JPEG12_SOURCES} src/jcapimin.c src/jchuff.c src/jcicc.c
+set(JPEG_SOURCES ${PUBLIC_HEADERS} ${JPEG12_SOURCES} src/jcapimin.c src/jchuff.c src/jcicc.c
   src/jcinit.c src/jclhuff.c src/jcmarker.c src/jcmaster.c src/jcomapi.c
   src/jcparam.c src/jcphuff.c src/jctrans.c src/jdapimin.c src/jdatadst.c
   src/jdatasrc.c src/jdhuff.c src/jdicc.c src/jdinput.c src/jdlhuff.c
@@ -802,7 +808,7 @@ if(WITH_TURBOJPEG)
       "-DBMP_SUPPORTED -DPPM_SUPPORTED")
     if(NOT MSVC_LIKE)
       set_target_properties(turbojpeg-static PROPERTIES OUTPUT_NAME turbojpeg)
-      set_framework_properties(turbojpeg)
+      # set_framework_properties(turbojpeg)
     endif()
 
     add_executable(tjunittest-static src/tjunittest.c src/tjutil.c
@@ -2000,10 +2006,10 @@ if(WITH_TURBOJPEG)
       INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
       ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT lib
       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT lib
-      FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime OPTIONAL
+      FRAMEWORK DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime OPTIONAL
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT bin)
     install(TARGETS tjbench
-      FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime OPTIONAL
+      FRAMEWORK DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime OPTIONAL
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT bin)
     if(NOT CMAKE_VERSION VERSION_LESS "3.1" AND MSVC_LIKE AND
       CMAKE_C_LINKER_SUPPORTS_PDB)
@@ -2014,7 +2020,7 @@ if(WITH_TURBOJPEG)
   if(ENABLE_STATIC)
     install(TARGETS turbojpeg-static EXPORT ${CMAKE_PROJECT_NAME}Targets
       INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-      FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime OPTIONAL
+      FRAMEWORK DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime OPTIONAL
       ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT lib)
     if(NOT ENABLE_SHARED)
       if(GENERATOR_IS_MULTI_CONFIG)
@@ -2033,7 +2039,7 @@ endif()
 if(ENABLE_STATIC)
   install(TARGETS jpeg-static EXPORT ${CMAKE_PROJECT_NAME}Targets
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime OPTIONAL
+    FRAMEWORK DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime OPTIONAL
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT lib)
   if(NOT ENABLE_SHARED)
     if(GENERATOR_IS_MULTI_CONFIG)
@@ -2051,7 +2057,7 @@ if(ENABLE_STATIC)
 endif()
 
 install(TARGETS rdjpgcom wrjpgcom
-  FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime OPTIONAL
+  FRAMEWORK DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime OPTIONAL
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT bin)
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/README.ijg
@@ -2097,11 +2103,12 @@ install(EXPORT ${CMAKE_PROJECT_NAME}Targets
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
   COMPONENT lib)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/jconfig.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/jerror.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/jmorecfg.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/jpeglib.h
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT include)
+# install(FILES ${CMAKE_CURRENT_BINARY_DIR}/jconfig.h
+
+#   ${CMAKE_CURRENT_SOURCE_DIR}/src/jerror.h
+#   ${CMAKE_CURRENT_SOURCE_DIR}/src/jmorecfg.h
+#   ${CMAKE_CURRENT_SOURCE_DIR}/src/jpeglib.h
+#   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT include)
 
 include(cmakescripts/BuildPackages.cmake)
 
