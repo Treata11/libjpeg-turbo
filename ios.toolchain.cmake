@@ -1,0 +1,6 @@
+set(CMAKE_SYSTEM_NAME iOS)
+set(CMAKE_SYSTEM_PROCESSOR arm64) # Or x86_64 for simulator
+set(CMAKE_OSX_ARCHITECTURES arm64) # Or x86_64 for simulator
+set(CMAKE_OSX_SYSROOT iphoneos) # Or iphonesimulator for simulator
+set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED NO)
+set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE NO)
